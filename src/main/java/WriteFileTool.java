@@ -11,30 +11,37 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-public class ReadFileTool {
+public class WriteFileTool {
 
     @JsonProperty("file_path")
     public String filePath;
 
+    @JsonProperty("content")
+    public String content;
+
     public static ChatCompletionTool tool() {
         return ChatCompletionTool.builder()
                 .function(FunctionDefinition.builder()
-                        .name("read")
-                        .description("Read and return the contents of a file")
+                        .name("write")
+                        .description("Write content to a file")
                         .parameters(FunctionParameters.builder()
                                 .putAdditionalProperty("type", JsonValue.from("object"))
+                                .putAdditionalProperty("required", JsonValue.from(List.of("file_path", "content")))
                                 .putAdditionalProperty("properties", JsonValue.from(Map.of(
                                         "file_path", Map.of(
                                                 "type", "string",
-                                                "description", "The path to the file to read"))))
-                                .putAdditionalProperty("required", JsonValue.from(List.of("file_path")))
+                                                "description", "The path of the file to write to"),
+                                        "content", Map.of(
+                                                "type", "string",
+                                                "description", "The content to write to the file"))))
                                 .build())
                         .build())
                 .build();
     }
 
     public static String execute(String argumentsJson) throws IOException {
-        ReadFileTool call = new ObjectMapper().readValue(argumentsJson, ReadFileTool.class);
-        return Files.readString(Path.of(call.filePath));
+        WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
+        Files.writeString(Path.of(call.filePath), call.content);
+        return "File written successfully";
     }
 }

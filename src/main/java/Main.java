@@ -2,15 +2,10 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import com.openai.core.JsonValue;
-import com.openai.models.FunctionDefinition;
-import com.openai.models.FunctionParameters;
-import com.openai.models.chat.completions.ChatCompletionTool;
 import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 public class Main {
     public static void main(String[] args) throws IOException {
@@ -36,22 +31,10 @@ public class Main {
                 .baseUrl(baseUrl)
                 .build();
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
-                        .model("anthropic/claude-haiku-4.5")
-                        .addUserMessage(prompt)
-                        .addTool(ChatCompletionTool.builder()
-                        .function(FunctionDefinition.builder()
-                        .name("read")
-                        .description("Read and return the contents of a file")
-                        .parameters(FunctionParameters.builder()
-                        .putAdditionalProperty("type", JsonValue.from("object"))
-                        .putAdditionalProperty("properties", JsonValue.from(Map.of(
-                        "file_path", Map.of(
-                                        "type", "string",
-                                        "description", "The path to the file to read"))))
-                        .putAdditionalProperty("required", JsonValue.from(List.of("file_path")))
-                        .build())
-                    .build())
-                .build());
+                .model("anthropic/claude-haiku-4.5")
+                .addUserMessage(prompt)
+                .addTool(ReadFileTool.tool())
+                .addTool(WriteFileTool.tool());
 
         while (true) {
             ChatCompletion response = client.chat().completions().create(messages.build());
@@ -69,13 +52,20 @@ public class Main {
             }
 
             for (var toolCall : toolCalls) {
-                if (!"read".equals(toolCall.function().name())) {
+                if (!"read".equals(toolCall.function().name()) && !"write".equals(toolCall.function().name())) {
                     throw new RuntimeException("unknown tool: " + toolCall.function().name());
                 }
-                messages.addMessage(ChatCompletionToolMessageParam.builder()
-                        .toolCallId(toolCall.id())
-                        .content(ReadFileTool.execute(toolCall.function().arguments()))
-                        .build());
+                if("read".equals(toolCall.function().name())) {
+                    messages.addMessage(ChatCompletionToolMessageParam.builder()
+                            .toolCallId(toolCall.id())
+                            .content(ReadFileTool.execute(toolCall.function().arguments()))
+                            .build());
+                } else if("write".equals(toolCall.function().name())) {
+                    messages.addMessage(ChatCompletionToolMessageParam.builder()
+                            .toolCallId(toolCall.id())
+                            .content(WriteFileTool.execute(toolCall.function().arguments()))
+                            .build());
+                }
             }
         }
 

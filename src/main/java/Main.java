@@ -6,6 +6,7 @@ import com.openai.core.JsonValue;
 import com.openai.models.FunctionDefinition;
 import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.ChatCompletionTool;
+import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,9 +35,7 @@ public class Main {
                 .apiKey(apiKey)
                 .baseUrl(baseUrl)
                 .build();
-
-        ChatCompletion response = client.chat().completions().create(
-                ChatCompletionCreateParams.builder()
+        ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
                         .model("anthropic/claude-haiku-4.5")
                         .addUserMessage(prompt)
                         .addTool(ChatCompletionTool.builder()
@@ -52,26 +51,34 @@ public class Main {
                         .putAdditionalProperty("required", JsonValue.from(List.of("file_path")))
                         .build())
                     .build())
-                .build()).build());
+                .build());
 
-        if (response.choices().isEmpty()) {
-            throw new RuntimeException("no choices in response");
-        }
-        var message = response.choices().get(0).message();
-        var toolCalls = message.toolCalls().orElse(List.of());
-
-        if (toolCalls.isEmpty()) {
-            System.out.print(message.content().orElse(""));
-        } else {
-            var function = toolCalls.get(0).function();
-            if (!"read".equals(function.name())) {
-                throw new RuntimeException("unknown tool: " + function.name());
+        while (true) {
+            ChatCompletion response = client.chat().completions().create(messages.build());
+            if (response.choices().isEmpty()) {
+                throw new RuntimeException("no choices in response");
             }
 
-            System.out.print(ReadFileTool.execute(function.arguments()));
+            var message = response.choices().get(0).message();
+            messages.addMessage(message);
+
+            var toolCalls = message.toolCalls().orElse(List.of());
+            if (toolCalls.isEmpty()) {
+                System.out.print(message.content().orElse(""));
+                break;
+            }
+
+            for (var toolCall : toolCalls) {
+                if (!"read".equals(toolCall.function().name())) {
+                    throw new RuntimeException("unknown tool: " + toolCall.function().name());
+                }
+                messages.addMessage(ChatCompletionToolMessageParam.builder()
+                        .toolCallId(toolCall.id())
+                        .content(ReadFileTool.execute(toolCall.function().arguments()))
+                        .build());
+            }
         }
 
         System.err.println("Logs from your program will appear here!");
-
     }
 }

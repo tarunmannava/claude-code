@@ -6,13 +6,13 @@ import com.openai.core.JsonValue;
 import com.openai.models.FunctionDefinition;
 import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.ChatCompletionTool;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length < 2 || !"-p".equals(args[0])) {
             System.err.println("Usage: program -p <prompt>");
             System.exit(1);
@@ -40,19 +40,19 @@ public class Main {
                         .model("anthropic/claude-haiku-4.5")
                         .addUserMessage(prompt)
                         .addTool(ChatCompletionTool.builder()
-        .function(FunctionDefinition.builder()
-                .name("read")
-                .description("Read and return the contents of a file")
-                .parameters(FunctionParameters.builder()
-                .putAdditionalProperty("type", JsonValue.from("object"))
-                .putAdditionalProperty("properties", JsonValue.from(Map.of(
+                        .function(FunctionDefinition.builder()
+                        .name("read")
+                        .description("Read and return the contents of a file")
+                        .parameters(FunctionParameters.builder()
+                        .putAdditionalProperty("type", JsonValue.from("object"))
+                        .putAdditionalProperty("properties", JsonValue.from(Map.of(
                         "file_path", Map.of(
                                         "type", "string",
                                         "description", "The path to the file to read"))))
                         .putAdditionalProperty("required", JsonValue.from(List.of("file_path")))
                         .build())
-                .build())
-        .build()).build());
+                    .build())
+                .build()).build());
 
         if (response.choices().isEmpty()) {
             throw new RuntimeException("no choices in response");
@@ -61,24 +61,18 @@ public class Main {
         var toolCalls = message.toolCalls().orElse(List.of());
 
         if (toolCalls.isEmpty()) {
-            System.out.println(message.content().orElse(""));
+            System.out.print(message.content().orElse(""));
         } else {
             var function = toolCalls.get(0).function();
             if (!"read".equals(function.name())) {
                 throw new RuntimeException("unknown tool: " + function.name());
             }
 
-            var args = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readTree(function.arguments());
-            String filePath = args.get("file_path").asText();
-            System.out.println(java.nio.file.Files.readString(java.nio.file.Path.of(filePath)));
+            System.out.print(ReadFileTool.execute(function.arguments()));
         }
-        
 
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.err.println("Logs from your program will appear here!");
 
-        // TODO: Uncomment the line below to pass the first stage
         System.out.print(response.choices().get(0).message().content().orElse(""));
     }
 }

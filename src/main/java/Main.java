@@ -56,6 +56,23 @@ public class Main {
         if (response.choices().isEmpty()) {
             throw new RuntimeException("no choices in response");
         }
+        var message = response.choices().get(0).message();
+        var toolCalls = message.toolCalls().orElse(List.of());
+
+        if (toolCalls.isEmpty()) {
+            System.out.println(message.content().orElse(""));
+        } else {
+            var function = toolCalls.get(0).function();
+            if (!"read".equals(function.name())) {
+                throw new RuntimeException("unknown tool: " + function.name());
+            }
+
+            var args = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(function.arguments());
+            String filePath = args.get("file_path").asText();
+            System.out.println(java.nio.file.Files.readString(java.nio.file.Path.of(filePath)));
+        }
+        
 
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.err.println("Logs from your program will appear here!");

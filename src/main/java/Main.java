@@ -73,6 +73,5 @@ public class Main {
 
         System.err.println("Logs from your program will appear here!");
 
-        System.out.print(response.choices().get(0).message().content().orElse(""));
     }
 }

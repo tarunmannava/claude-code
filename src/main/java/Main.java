@@ -38,10 +38,26 @@ public class Main {
         if (trimmedPrompt.startsWith("/")) {
             String afterSlash = trimmedPrompt.substring(1).trim();
             if (!afterSlash.isEmpty()) {
-                String skillName = afterSlash.split("\\s+")[0];
+                String skillName;
+                String argsString;
+                int wsIndex = -1;
+                for (int i = 0; i < afterSlash.length(); i++) {
+                    if (Character.isWhitespace(afterSlash.charAt(i))) {
+                        wsIndex = i;
+                        break;
+                    }
+                }
+                if (wsIndex != -1) {
+                    skillName = afterSlash.substring(0, wsIndex);
+                    argsString = afterSlash.substring(wsIndex + 1).trim();
+                } else {
+                    skillName = afterSlash;
+                    argsString = "";
+                }
+
                 Skill invokedSkill = Skill.find(skills, skillName);
                 if (invokedSkill != null) {
-                    userPrompt = invokedSkill.body;
+                    userPrompt = invokedSkill.applyArguments(argsString);
                 }
             }
         }

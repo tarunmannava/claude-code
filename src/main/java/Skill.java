@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class Skill {
@@ -137,5 +139,27 @@ public class Skill {
             }
         }
         return null;
+    }
+
+    public String applyArguments(String argsString) {
+        if (body == null) {
+            return "";
+        }
+        String trimmedArgs = (argsString != null) ? argsString.trim() : "";
+        String[] parts = trimmedArgs.isEmpty() ? new String[0] : trimmedArgs.split("\\s+");
+
+        // Substitute $ARGUMENTS with the full argument string
+        String substituted = body.replace("$ARGUMENTS", trimmedArgs);
+
+        // Substitute positional arguments $0, $1, $2, ...
+        Matcher matcher = Pattern.compile("\\$(\\d+)").matcher(substituted);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            int index = Integer.parseInt(matcher.group(1));
+            String replacement = (index < parts.length) ? parts[index] : "";
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }

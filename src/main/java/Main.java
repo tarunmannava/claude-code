@@ -53,7 +53,7 @@ public class Main {
             }
 
             for (var toolCall : toolCalls) {
-                if (!"read".equals(toolCall.function().name()) && !"write".equals(toolCall.function().name())) {
+                if (!"read".equals(toolCall.function().name()) && !"write".equals(toolCall.function().name()) && !"bash".equals(toolCall.function().name())) {
                     throw new RuntimeException("unknown tool: " + toolCall.function().name());
                 }
                 if("read".equals(toolCall.function().name())) {

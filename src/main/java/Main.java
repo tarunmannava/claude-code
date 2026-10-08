@@ -30,9 +30,17 @@ public class Main {
                 .apiKey(apiKey)
                 .baseUrl(baseUrl)
                 .build();
+        List<Skill> skills = Skill.loadAll();
+        String skillsPrompt = Skill.formatSkillsPrompt(skills);
+
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
-                .model("anthropic/claude-haiku-4.5")
-                .addUserMessage(prompt)
+                .model("anthropic/claude-haiku-4.5");
+
+        if (skillsPrompt != null && !skillsPrompt.isEmpty()) {
+            messages.addSystemMessage(skillsPrompt);
+        }
+
+        messages.addUserMessage(prompt)
                 .addTool(ReadFileTool.tool())
                 .addTool(BashTool.tool())
                 .addTool(WriteFileTool.tool());

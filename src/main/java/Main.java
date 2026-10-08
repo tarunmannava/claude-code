@@ -34,6 +34,7 @@ public class Main {
                 .model("anthropic/claude-haiku-4.5")
                 .addUserMessage(prompt)
                 .addTool(ReadFileTool.tool())
+                .addTool(BashTool.tool())
                 .addTool(WriteFileTool.tool());
 
         while (true) {
@@ -65,7 +66,13 @@ public class Main {
                             .toolCallId(toolCall.id())
                             .content(WriteFileTool.execute(toolCall.function().arguments()))
                             .build());
+                } else if("bash".equals(toolCall.function().name())) {
+                    messages.addMessage(ChatCompletionToolMessageParam.builder()
+                            .toolCallId(toolCall.id())
+                            .content(BashTool.execute(toolCall.function().arguments()))
+                            .build());
                 }
+
             }
         }
 

@@ -126,4 +126,16 @@ public class Skill {
         }
         return sb.toString();
     }
+
+    public static Skill find(List<Skill> skills, String name) {
+        if (skills == null || name == null) {
+            return null;
+        }
+        for (Skill s : skills) {
+            if (s.name.equalsIgnoreCase(name) || s.dir.getFileName().toString().equalsIgnoreCase(name)) {
+                return s;
+            }
+        }
+        return null;
+    }
 }

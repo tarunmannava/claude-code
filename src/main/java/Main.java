@@ -33,6 +33,19 @@ public class Main {
         List<Skill> skills = Skill.loadAll();
         String skillsPrompt = Skill.formatSkillsPrompt(skills);
 
+        String userPrompt = prompt;
+        String trimmedPrompt = prompt.trim();
+        if (trimmedPrompt.startsWith("/")) {
+            String afterSlash = trimmedPrompt.substring(1).trim();
+            if (!afterSlash.isEmpty()) {
+                String skillName = afterSlash.split("\\s+")[0];
+                Skill invokedSkill = Skill.find(skills, skillName);
+                if (invokedSkill != null) {
+                    userPrompt = invokedSkill.body;
+                }
+            }
+        }
+
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
                 .model("anthropic/claude-haiku-4.5");
 
@@ -40,7 +53,7 @@ public class Main {
             messages.addSystemMessage(skillsPrompt);
         }
 
-        messages.addUserMessage(prompt)
+        messages.addUserMessage(userPrompt)
                 .addTool(ReadFileTool.tool())
                 .addTool(BashTool.tool())
                 .addTool(WriteFileTool.tool());

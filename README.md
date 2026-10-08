@@ -1,80 +1,87 @@
 [![progress-banner](https://backend.codecrafters.io/progress/claude-code/8aa6d22c-5906-48c2-85ed-15952156cd5a)](https://app.codecrafters.io/users/tarunmannava?r=2qF)
 
-# Claude Code (Java)
+# Build Your Own Claude Code (Java)
 
-A custom implementation of Anthropic's **Claude Code** agentic CLI built from scratch in Java, completed as part of the CodeCrafters ["Build Your Own Claude Code"](https://codecrafters.io/challenges/claude-code) challenge.
+This repository contains my Java solution to the [CodeCrafters "Build Your Own Claude Code" Challenge](https://codecrafters.io/challenges/claude-code).
 
----
-
-## Features
-
-### 1. Autonomous Agent Loop & Tool Calling
-* Connects to LLM endpoints (via OpenAI-compatible API / OpenRouter).
-* Iterative agentic execution loop: receives tool calls from the model, executes them locally, feeds output back to the conversation, and repeats until the task is complete.
-
-### 2. Built-in Tools
-* **File Reading (`read`)**: Reads file content safely from the local filesystem using Java NIO (`ReadFileTool`).
-* **File Writing (`write`)**: Writes and creates files on disk with specified contents (`WriteFileTool`).
-* **Shell Command Execution (`bash`)**: Runs commands via `ProcessBuilder` in a shell environment, capturing both `stdout` and `stderr` (`BashTool`).
-
-### 3. Agent Skills Extension ([Agent Skills Standard](https://agentskills.io/specification))
-Supports user-defined skills placed in `.claude/skills/<skill-name>/SKILL.md`:
-* **Level 1 Discovery (Progressive Disclosure)**: Scans available skills on startup, parses YAML frontmatter using SnakeYAML, and advertises their name and description in the system prompt without bloating the context window.
-* **Level 2 Invocation**: Supports slash commands (e.g. `/apple`, `/nimbus`) to load only the invoked skill's body instructions on demand.
-* **Template Parameterization**: Substitutes `$ARGUMENTS` with the full argument string, and resolves positional arguments (`$0`, `$1`, etc.) into the skill body.
+Claude Code is an AI coding assistant that uses Large Language Models (LLMs) to understand codebases, edit files, and execute shell commands through tool-calling loops. In this challenge, we build an agentic coding assistant from scratch in Java.
 
 ---
 
-## Project Structure
+## 🏆 Challenge Stages Completed
+
+### Core Stages
+- [x] **Stage 1: Communicate with the LLM** — Configure the OpenAI-compatible HTTP client and handle initial prompt completions.
+- [x] **Stage 2: Advertise the read tool** — Declare and pass JSON tool schemas for the `read` file operation.
+- [x] **Stage 3: Execute the read tool** — Parse incoming tool calls, read files from the filesystem via `ReadFileTool`, and return tool results.
+- [x] **Stage 4: Implement the agent loop** — Multi-turn conversation loop that feeds tool outputs back to the LLM until completion.
+- [x] **Stage 5: Implement the write tool** — Added `WriteFileTool` (`write`) to allow the model to create and modify files.
+- [x] **Stage 6: Implement the bash tool** — Added `BashTool` (`bash`) to execute shell commands using Java's `ProcessBuilder` and capture combined `stdout`/`stderr`.
+
+### Skills Extension ([Agent Skills Standard](https://agentskills.io/specification))
+- [x] **Advertise skills to the LLM (Level 1)** — Scan `.claude/skills/`, parse `SKILL.md` YAML frontmatter, and summarize available skills in the system prompt.
+- [x] **Invoke a skill by name (Level 2)** — Detect slash commands (e.g., `/<skill-name>`) and load only the invoked skill's body instructions on demand.
+- [x] **Pass arguments to a skill** — Parse trailing inputs and perform template substitution for `$ARGUMENTS` and positional placeholders (`$0`, `$1`, ...).
+- [ ] **Stack multiple skills**
+- [ ] **Run a script bundled with a skill**
+- [ ] **Let the model choose a skill**
+- [ ] **Run a skill in a subagent**
+
+---
+
+## 🏗️ Architecture & Implementation
 
 ```text
-.
-├── .claude/
-│   └── skills/          # Custom skill folders (each containing SKILL.md)
-├── src/
-│   └── main/
-│       └── java/
-│           ├── Main.java          # Entry point and agent conversation loop
-│           ├── ReadFileTool.java  # Tool for reading files
-│           ├── WriteFileTool.java # Tool for writing files
-│           ├── BashTool.java      # Tool for executing shell commands
-│           └── Skill.java         # Skills discovery, parsing & argument substitution
-├── pom.xml                        # Maven configuration and dependencies
-└── your_program.sh                # Local execution script
+src/main/java/
+├── Main.java          # Entry point, CLI argument parsing, and agentic loop
+├── ReadFileTool.java  # Tool definition and execution for reading files
+├── WriteFileTool.java # Tool definition and execution for writing files
+├── BashTool.java      # Tool definition and ProcessBuilder execution for bash commands
+└── Skill.java         # Skills loader, YAML frontmatter parser, and argument substituter
 ```
+
+### Key Components
+
+* **OpenAI-Compatible Tool Calling (`Main.java`)**: Uses `openai-java` with OpenRouter to stream messages and execute function tool calls dynamically in a `while(true)` agent loop.
+* **Process Execution (`BashTool.java`)**: Spawns sub-processes with `ProcessBuilder`, redirecting error streams to capture unified execution logs without deadlocks.
+* **Agent Skills Loader (`Skill.java`)**: Implements progressive disclosure. Loads Level 1 metadata via `SnakeYAML` for cataloging, and resolves Level 2 markdown bodies when invoked by slash commands.
 
 ---
 
-## Getting Started
+## 🚀 Running Locally
 
 ### Prerequisites
 * Java 25 (or compatible JDK)
 * Maven 3.8+
 
-### Environment Setup
-Set your API key before running:
+### Setup Environment
+Set your OpenRouter API key:
 
 ```bash
-export OPENROUTER_API_KEY="your-api-key-here"
+export OPENROUTER_API_KEY="your-api-key"
 # Optional (defaults to https://openrouter.ai/api/v1):
 # export OPENROUTER_BASE_URL="https://openrouter.ai/api/v1"
 ```
 
-### Running Locally
+### Run
+Execute the program via the CodeCrafters runner script:
 
 ```bash
-# Run with a general prompt
-./your_program.sh -p "List files in the current directory and summarize them"
+# General coding assistant prompt
+./your_program.sh -p "Read the file app/main.js and explain what it does"
 
-# Invoke a skill with arguments
-./your_program.sh -p "/deploy staging us-east"
+# Execute a bash command via the agent loop
+./your_program.sh -p "List files using ls and delete any temp files"
+
+# Invoke an Agent Skill
+./your_program.sh -p "/deploy staging us-west"
 ```
 
 ---
 
-## Submitting to CodeCrafters
+## 🧪 Testing with CodeCrafters
 
-To validate progress against CodeCrafters tests:
+To run remote tests and submit progress to CodeCrafters:
 
 ```bash
 codecrafters submit

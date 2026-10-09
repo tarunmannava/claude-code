@@ -141,6 +141,57 @@ public class Skill {
         return null;
     }
 
+    public record ParsedPrompt(List<Skill> skills, String argumentsText) {}
+
+    public static ParsedPrompt parsePrompt(String prompt, List<Skill> skills) {
+        if (prompt == null || prompt.isBlank()) {
+            return new ParsedPrompt(List.of(), prompt != null ? prompt : "");
+        }
+        String trimmed = prompt.trim();
+        if (!trimmed.startsWith("/")) {
+            return new ParsedPrompt(List.of(), prompt);
+        }
+
+        List<Skill> matchedSkills = new ArrayList<>();
+        int i = 0;
+        int len = prompt.length();
+        String argumentsText = "";
+
+        while (i < len) {
+            // Skip whitespace
+            while (i < len && Character.isWhitespace(prompt.charAt(i))) {
+                i++;
+            }
+            if (i >= len) {
+                break;
+            }
+
+            int tokenStart = i;
+            while (i < len && !Character.isWhitespace(prompt.charAt(i))) {
+                i++;
+            }
+            int tokenEnd = i;
+            String token = prompt.substring(tokenStart, tokenEnd);
+
+            Skill skill = null;
+            if (token.startsWith("/")) {
+                String skillName = token.substring(1);
+                skill = find(skills, skillName);
+            }
+
+            if (skill != null) {
+                matchedSkills.add(skill);
+            } else {
+                // First token that does not name a skill ends the run.
+                // That token and everything after it become the argument text.
+                argumentsText = prompt.substring(tokenStart).trim();
+                break;
+            }
+        }
+
+        return new ParsedPrompt(matchedSkills, argumentsText);
+    }
+
     public String applyArguments(String argsString) {
         if (body == null) {
             return "";

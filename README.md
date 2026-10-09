@@ -22,7 +22,7 @@ Claude Code is an AI coding assistant that uses Large Language Models (LLMs) to 
 - [x] **Advertise skills to the LLM (Level 1)** — Scan `.claude/skills/`, parse `SKILL.md` YAML frontmatter, and summarize available skills in the system prompt.
 - [x] **Invoke a skill by name (Level 2)** — Detect slash commands (e.g., `/<skill-name>`) and load only the invoked skill's body instructions on demand.
 - [x] **Pass arguments to a skill** — Parse trailing inputs and perform template substitution for `$ARGUMENTS` and positional placeholders (`$0`, `$1`, ...).
-- [ ] **Stack multiple skills**
+- [x] **Stack multiple skills** — Expand chained slash commands (`/skill1 /skill2 args`), passing shared arguments to each invoked skill body across separate user messages.
 - [ ] **Run a script bundled with a skill**
 - [ ] **Let the model choose a skill**
 - [ ] **Run a skill in a subagent**

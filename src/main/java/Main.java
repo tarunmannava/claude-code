@@ -33,35 +33,6 @@ public class Main {
         List<Skill> skills = Skill.loadAll();
         String skillsPrompt = Skill.formatSkillsPrompt(skills);
 
-        String userPrompt = prompt;
-        String trimmedPrompt = prompt.trim();
-        if (trimmedPrompt.startsWith("/")) {
-            String afterSlash = trimmedPrompt.substring(1).trim();
-            if (!afterSlash.isEmpty()) {
-                String skillName;
-                String argsString;
-                int wsIndex = -1;
-                for (int i = 0; i < afterSlash.length(); i++) {
-                    if (Character.isWhitespace(afterSlash.charAt(i))) {
-                        wsIndex = i;
-                        break;
-                    }
-                }
-                if (wsIndex != -1) {
-                    skillName = afterSlash.substring(0, wsIndex);
-                    argsString = afterSlash.substring(wsIndex + 1).trim();
-                } else {
-                    skillName = afterSlash;
-                    argsString = "";
-                }
-
-                Skill invokedSkill = Skill.find(skills, skillName);
-                if (invokedSkill != null) {
-                    userPrompt = invokedSkill.applyArguments(argsString);
-                }
-            }
-        }
-
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
                 .model("anthropic/claude-haiku-4.5");
 
@@ -69,8 +40,16 @@ public class Main {
             messages.addSystemMessage(skillsPrompt);
         }
 
-        messages.addUserMessage(userPrompt)
-                .addTool(ReadFileTool.tool())
+        Skill.ParsedPrompt parsed = Skill.parsePrompt(prompt, skills);
+        if (!parsed.skills().isEmpty()) {
+            for (Skill skill : parsed.skills()) {
+                messages.addUserMessage(skill.applyArguments(parsed.argumentsText()));
+            }
+        } else {
+            messages.addUserMessage(prompt);
+        }
+
+        messages.addTool(ReadFileTool.tool())
                 .addTool(BashTool.tool())
                 .addTool(WriteFileTool.tool());
 

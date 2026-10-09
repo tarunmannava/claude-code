@@ -126,6 +126,7 @@ public class Skill {
                 sb.append("\n");
             }
         }
+        sb.append("\n\nIf a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.");
         return sb.toString();
     }
 
@@ -133,12 +134,90 @@ public class Skill {
         if (skills == null || name == null) {
             return null;
         }
+        String cleanName = name.startsWith("/") ? name.substring(1).trim() : name.trim();
         for (Skill s : skills) {
-            if (s.name.equalsIgnoreCase(name) || s.dir.getFileName().toString().equalsIgnoreCase(name)) {
+            if (s.name.equalsIgnoreCase(cleanName) || s.dir.getFileName().toString().equalsIgnoreCase(cleanName)) {
                 return s;
             }
         }
         return null;
+    }
+
+    public static String execute(List<Skill> skills, String name, String args) {
+        Skill skill = find(skills, name);
+        if (skill == null) {
+            return "Error: Skill not found: " + name;
+        }
+        String result = skill.applyArguments(args != null ? args : "");
+        if (skill.dir != null && Files.isDirectory(skill.dir.resolve("scripts"))) {
+            String dirPath = skill.dir.toString().replace('\\', '/');
+            result = "Skill: " + skill.name + " (located at " + dirPath + ")\n" +
+                    "Paths in the instructions below are relative to that folder.\n\n" +
+                    result;
+        }
+        return result;
+    }
+
+    public record ParsedPrompt(List<Skill> skills, String argumentsText) {}
+
+    public static ParsedPrompt parsePrompt(String prompt, List<Skill> skills) {
+        if (prompt == null || prompt.isBlank()) {
+            return new ParsedPrompt(List.of(), prompt != null ? prompt : "");
+        }
+        String trimmed = prompt.trim();
+        if (!trimmed.startsWith("/")) {
+            return new ParsedPrompt(List.of(), prompt);
+        }
+
+        List<Skill> matchedSkills = new ArrayList<>();
+        int i = 0;
+        int len = prompt.length();
+        String argumentsText = "";
+
+        while (i < len) {
+            // Skip whitespace
+            while (i < len && Character.isWhitespace(prompt.charAt(i))) {
+                i++;
+            }
+            if (i >= len) {
+                break;
+            }
+
+            int tokenStart = i;
+            while (i < len && !Character.isWhitespace(prompt.charAt(i))) {
+                i++;
+            }
+            int tokenEnd = i;
+            String token = prompt.substring(tokenStart, tokenEnd);
+
+            Skill skill = null;
+            if (token.startsWith("/")) {
+                String skillName = token.substring(1);
+                skill = find(skills, skillName);
+            }
+
+            if (skill != null) {
+                matchedSkills.add(skill);
+            } else {
+                // First token that does not name a skill ends the run.
+                // That token and everything after it become the argument text.
+                argumentsText = prompt.substring(tokenStart).trim();
+                break;
+            }
+        }
+
+        return new ParsedPrompt(matchedSkills, argumentsText);
+    }
+
+    public String formatPrompt(String argsString) {
+        String substituted = applyArguments(argsString);
+        if (dir == null) {
+            return substituted;
+        }
+        String dirPath = dir.toString().replace('\\', '/');
+        return "Skill: " + name + " (located at " + dirPath + ")\n" +
+                "Paths in the instructions below are relative to that folder.\n\n" +
+                substituted;
     }
 
     public String applyArguments(String argsString) {

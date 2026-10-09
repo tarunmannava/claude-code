@@ -1,3 +1,6 @@
+package tools;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.core.JsonValue;
@@ -5,18 +8,26 @@ import com.openai.models.FunctionDefinition;
 import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.ChatCompletionTool;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Map;
 
-
-public class BashTool {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class BashTool implements Tool {
 
     @JsonProperty("command")
     public String command;
+
+    @Override
+    public String name() {
+        return "bash";
+    }
+
+    @Override
+    public ChatCompletionTool toolDefinition() {
+        return tool();
+    }
 
     public static ChatCompletionTool tool() {
         return ChatCompletionTool.builder()
@@ -35,7 +46,8 @@ public class BashTool {
                 .build();
     }
 
-    public static String execute(String argumentsJson) {
+    @Override
+    public String execute(String argumentsJson) {
         try {
             BashTool call = new ObjectMapper().readValue(argumentsJson, BashTool.class);
 
@@ -54,8 +66,7 @@ public class BashTool {
             process.waitFor();
             return output;
         } catch (Exception e) {
-        return "Error executing command: " + e.getMessage();
+            return "Error executing command: " + e.getMessage();
         }
     }
-
 }

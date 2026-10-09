@@ -3,8 +3,11 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
+import tools.SkillTool;
+import tools.Tool;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
@@ -32,34 +35,9 @@ public class Main {
                 .build();
         List<Skill> skills = Skill.loadAll();
         String skillsPrompt = Skill.formatSkillsPrompt(skills);
-
-        String userPrompt = prompt;
-        String trimmedPrompt = prompt.trim();
-        if (trimmedPrompt.startsWith("/")) {
-            String afterSlash = trimmedPrompt.substring(1).trim();
-            if (!afterSlash.isEmpty()) {
-                String skillName;
-                String argsString;
-                int wsIndex = -1;
-                for (int i = 0; i < afterSlash.length(); i++) {
-                    if (Character.isWhitespace(afterSlash.charAt(i))) {
-                        wsIndex = i;
-                        break;
-                    }
-                }
-                if (wsIndex != -1) {
-                    skillName = afterSlash.substring(0, wsIndex);
-                    argsString = afterSlash.substring(wsIndex + 1).trim();
-                } else {
-                    skillName = afterSlash;
-                    argsString = "";
-                }
-
-                Skill invokedSkill = Skill.find(skills, skillName);
-                if (invokedSkill != null) {
-                    userPrompt = invokedSkill.applyArguments(argsString);
-                }
-            }
+        List<Tool> tools = new ArrayList<>(Tool.defaultTools());
+        if (!skills.isEmpty()) {
+            tools.add(new SkillTool((name, skillArgs) -> Skill.execute(skills, name, skillArgs)));
         }
 
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
@@ -69,10 +47,18 @@ public class Main {
             messages.addSystemMessage(skillsPrompt);
         }
 
-        messages.addUserMessage(userPrompt)
-                .addTool(ReadFileTool.tool())
-                .addTool(BashTool.tool())
-                .addTool(WriteFileTool.tool());
+        Skill.ParsedPrompt parsed = Skill.parsePrompt(prompt, skills);
+        if (!parsed.skills().isEmpty()) {
+            for (Skill skill : parsed.skills()) {
+                messages.addUserMessage(skill.formatPrompt(parsed.argumentsText()));
+            }
+        } else {
+            messages.addUserMessage(prompt);
+        }
+
+        for (Tool tool : tools) {
+            messages.addTool(tool.toolDefinition());
+        }
 
         while (true) {
             ChatCompletion response = client.chat().completions().create(messages.build());
@@ -90,26 +76,14 @@ public class Main {
             }
 
             for (var toolCall : toolCalls) {
-                if (!"read".equals(toolCall.function().name()) && !"write".equals(toolCall.function().name()) && !"bash".equals(toolCall.function().name())) {
-                    throw new RuntimeException("unknown tool: " + toolCall.function().name());
-                }
-                if("read".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(ReadFileTool.execute(toolCall.function().arguments()))
-                            .build());
-                } else if("write".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(WriteFileTool.execute(toolCall.function().arguments()))
-                            .build());
-                } else if("bash".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(BashTool.execute(toolCall.function().arguments()))
-                            .build());
-                }
+                String toolName = toolCall.function().name();
+                Tool tool = Tool.find(tools, toolName)
+                        .orElseThrow(() -> new RuntimeException("unknown tool: " + toolName));
 
+                messages.addMessage(ChatCompletionToolMessageParam.builder()
+                        .toolCallId(toolCall.id())
+                        .content(tool.execute(toolCall.function().arguments()))
+                        .build());
             }
         }
 

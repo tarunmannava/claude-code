@@ -1,3 +1,6 @@
+package tools;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.core.JsonValue;
@@ -5,19 +8,29 @@ import com.openai.models.FunctionDefinition;
 import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.ChatCompletionTool;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-public class WriteFileTool {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class WriteFileTool implements Tool {
 
     @JsonProperty("file_path")
     public String filePath;
 
     @JsonProperty("content")
     public String content;
+
+    @Override
+    public String name() {
+        return "write";
+    }
+
+    @Override
+    public ChatCompletionTool toolDefinition() {
+        return tool();
+    }
 
     public static ChatCompletionTool tool() {
         return ChatCompletionTool.builder()
@@ -39,9 +52,14 @@ public class WriteFileTool {
                 .build();
     }
 
-    public static String execute(String argumentsJson) throws IOException {
-        WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
-        Files.writeString(Path.of(call.filePath), call.content);
-        return "File written successfully";
+    @Override
+    public String execute(String argumentsJson) {
+        try {
+            WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
+            Files.writeString(Path.of(call.filePath), call.content);
+            return "File written successfully";
+        } catch (Exception e) {
+            return "Error writing file: " + e.getMessage();
+        }
     }
 }

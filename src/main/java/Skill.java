@@ -126,6 +126,7 @@ public class Skill {
                 sb.append("\n");
             }
         }
+        sb.append("\n\nIf a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.");
         return sb.toString();
     }
 
@@ -133,12 +134,28 @@ public class Skill {
         if (skills == null || name == null) {
             return null;
         }
+        String cleanName = name.startsWith("/") ? name.substring(1).trim() : name.trim();
         for (Skill s : skills) {
-            if (s.name.equalsIgnoreCase(name) || s.dir.getFileName().toString().equalsIgnoreCase(name)) {
+            if (s.name.equalsIgnoreCase(cleanName) || s.dir.getFileName().toString().equalsIgnoreCase(cleanName)) {
                 return s;
             }
         }
         return null;
+    }
+
+    public static String execute(List<Skill> skills, String name, String args) {
+        Skill skill = find(skills, name);
+        if (skill == null) {
+            return "Error: Skill not found: " + name;
+        }
+        String result = skill.applyArguments(args != null ? args : "");
+        if (skill.dir != null && Files.isDirectory(skill.dir.resolve("scripts"))) {
+            String dirPath = skill.dir.toString().replace('\\', '/');
+            result = "Skill: " + skill.name + " (located at " + dirPath + ")\n" +
+                    "Paths in the instructions below are relative to that folder.\n\n" +
+                    result;
+        }
+        return result;
     }
 
     public record ParsedPrompt(List<Skill> skills, String argumentsText) {}

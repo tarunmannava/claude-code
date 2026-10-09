@@ -24,7 +24,7 @@ Claude Code is an AI coding assistant that uses Large Language Models (LLMs) to 
 - [x] **Pass arguments to a skill** — Parse trailing inputs and perform template substitution for `$ARGUMENTS` and positional placeholders (`$0`, `$1`, ...).
 - [x] **Stack multiple skills** — Expand chained slash commands (`/skill1 /skill2 args`), passing shared arguments to each invoked skill body across separate user messages.
 - [x] **Run a script bundled with a skill** — Disclose skill folder paths (`Skill: <name> (located at <path>)`) so the model can resolve relative script references and execute them via `bash`.
-- [ ] **Let the model choose a skill**
+- [x] **Let the model choose a skill** — Advertise the `Skill` tool (`SkillTool`), enabling the LLM to inspect skill descriptions in the system prompt and dynamically invoke matching skills.
 - [ ] **Run a skill in a subagent**
 
 ---
@@ -34,16 +34,19 @@ Claude Code is an AI coding assistant that uses Large Language Models (LLMs) to 
 ```text
 src/main/java/
 ├── Main.java          # Entry point, CLI argument parsing, and agentic loop
-├── ReadFileTool.java  # Tool definition and execution for reading files
-├── WriteFileTool.java # Tool definition and execution for writing files
-├── BashTool.java      # Tool definition and ProcessBuilder execution for bash commands
-└── Skill.java         # Skills loader, YAML frontmatter parser, and argument substituter
+├── Skill.java         # Skills loader, YAML frontmatter parser, and argument substituter
+└── tools/             # Tool definitions and execution engine
+    ├── Tool.java          # Unified Tool interface and registry
+    ├── ReadFileTool.java  # Tool definition and execution for reading files
+    ├── WriteFileTool.java # Tool definition and execution for writing files
+    ├── BashTool.java      # Tool definition and ProcessBuilder execution for bash commands
+    └── SkillTool.java     # Tool definition and execution for dynamic model skill invocation
 ```
 
 ### Key Components
 
-* **OpenAI-Compatible Tool Calling (`Main.java`)**: Uses `openai-java` with OpenRouter to stream messages and execute function tool calls dynamically in a `while(true)` agent loop.
-* **Process Execution (`BashTool.java`)**: Spawns sub-processes with `ProcessBuilder`, redirecting error streams to capture unified execution logs without deadlocks.
+* **OpenAI-Compatible Tool Calling (`Main.java`, `tools/`)**: Uses `openai-java` with OpenRouter to stream messages and execute dynamic function tool calls via the unified `Tool` interface.
+* **Process Execution (`tools/BashTool.java`)**: Spawns sub-processes with `ProcessBuilder`, redirecting error streams to capture unified execution logs without deadlocks.
 * **Agent Skills Loader (`Skill.java`)**: Implements progressive disclosure. Loads Level 1 metadata via `SnakeYAML` for cataloging, and resolves Level 2 markdown bodies when invoked by slash commands.
 
 ---

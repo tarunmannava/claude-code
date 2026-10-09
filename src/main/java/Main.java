@@ -3,8 +3,11 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
+import tools.SkillTool;
+import tools.Tool;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
@@ -32,6 +35,10 @@ public class Main {
                 .build();
         List<Skill> skills = Skill.loadAll();
         String skillsPrompt = Skill.formatSkillsPrompt(skills);
+        List<Tool> tools = new ArrayList<>(Tool.defaultTools());
+        if (!skills.isEmpty()) {
+            tools.add(new SkillTool((name, skillArgs) -> Skill.execute(skills, name, skillArgs)));
+        }
 
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
                 .model("anthropic/claude-haiku-4.5");
@@ -49,9 +56,9 @@ public class Main {
             messages.addUserMessage(prompt);
         }
 
-        messages.addTool(ReadFileTool.tool())
-                .addTool(BashTool.tool())
-                .addTool(WriteFileTool.tool());
+        for (Tool tool : tools) {
+            messages.addTool(tool.toolDefinition());
+        }
 
         while (true) {
             ChatCompletion response = client.chat().completions().create(messages.build());
@@ -69,26 +76,14 @@ public class Main {
             }
 
             for (var toolCall : toolCalls) {
-                if (!"read".equals(toolCall.function().name()) && !"write".equals(toolCall.function().name()) && !"bash".equals(toolCall.function().name())) {
-                    throw new RuntimeException("unknown tool: " + toolCall.function().name());
-                }
-                if("read".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(ReadFileTool.execute(toolCall.function().arguments()))
-                            .build());
-                } else if("write".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(WriteFileTool.execute(toolCall.function().arguments()))
-                            .build());
-                } else if("bash".equals(toolCall.function().name())) {
-                    messages.addMessage(ChatCompletionToolMessageParam.builder()
-                            .toolCallId(toolCall.id())
-                            .content(BashTool.execute(toolCall.function().arguments()))
-                            .build());
-                }
+                String toolName = toolCall.function().name();
+                Tool tool = Tool.find(tools, toolName)
+                        .orElseThrow(() -> new RuntimeException("unknown tool: " + toolName));
 
+                messages.addMessage(ChatCompletionToolMessageParam.builder()
+                        .toolCallId(toolCall.id())
+                        .content(tool.execute(toolCall.function().arguments()))
+                        .build());
             }
         }
 

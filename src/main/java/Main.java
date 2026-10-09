@@ -37,7 +37,7 @@ public class Main {
         String skillsPrompt = Skill.formatSkillsPrompt(skills);
         List<Tool> tools = new ArrayList<>(Tool.defaultTools());
         if (!skills.isEmpty()) {
-            tools.add(new SkillTool((name, skillArgs) -> Skill.execute(skills, name, skillArgs)));
+            tools.add(new SkillTool((name, skillArgs) -> executeSkill(client, skills, name, skillArgs)));
         }
 
         ChatCompletionCreateParams.Builder messages = ChatCompletionCreateParams.builder()
@@ -56,6 +56,33 @@ public class Main {
             messages.addUserMessage(prompt);
         }
 
+        String finalResponse = runAgentLoop(client, messages, tools);
+        System.out.print(finalResponse);
+
+        System.err.println("Logs from your program will appear here!");
+    }
+
+    public static String executeSkill(OpenAIClient client, List<Skill> skills, String name, String args) {
+        Skill skill = Skill.find(skills, name);
+        if (skill == null) {
+            return "Error: Skill not found: " + name;
+        }
+
+        if (skill.isFork()) {
+            String subagentPrompt = skill.getInstructions(args);
+            ChatCompletionCreateParams.Builder subMessages = ChatCompletionCreateParams.builder()
+                    .model("anthropic/claude-haiku-4.5");
+            subMessages.addUserMessage(subagentPrompt);
+            String subagentAnswer = runAgentLoop(client, subMessages, Tool.defaultTools());
+            return "Skill " + skill.name + " ran in a separate context and returned: " + subagentAnswer.strip();
+        }
+
+        return skill.getInstructions(args);
+    }
+
+    public static String runAgentLoop(OpenAIClient client,
+                                      ChatCompletionCreateParams.Builder messages,
+                                      List<Tool> tools) {
         for (Tool tool : tools) {
             messages.addTool(tool.toolDefinition());
         }
@@ -71,8 +98,7 @@ public class Main {
 
             var toolCalls = message.toolCalls().orElse(List.of());
             if (toolCalls.isEmpty()) {
-                System.out.print(message.content().orElse(""));
-                break;
+                return message.content().orElse("");
             }
 
             for (var toolCall : toolCalls) {
@@ -86,7 +112,5 @@ public class Main {
                         .build());
             }
         }
-
-        System.err.println("Logs from your program will appear here!");
     }
 }

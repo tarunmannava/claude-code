@@ -33,8 +33,16 @@ public class ReadFileTool {
                 .build();
     }
 
-    public static String execute(String argumentsJson) throws IOException {
-        ReadFileTool call = new ObjectMapper().readValue(argumentsJson, ReadFileTool.class);
-        return Files.readString(Path.of(call.filePath));
+    public static String execute(String argumentsJson) {
+        try {
+            ReadFileTool call = new ObjectMapper().readValue(argumentsJson, ReadFileTool.class);
+            Path path = Path.of(call.filePath);
+            if (Files.isDirectory(path)) {
+                return "Error: " + call.filePath + " is a directory";
+            }
+            return Files.readString(path);
+        } catch (Exception e) {
+            return "Error reading file: " + e.getMessage();
+        }
     }
 }

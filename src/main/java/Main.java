@@ -43,7 +43,7 @@ public class Main {
         Skill.ParsedPrompt parsed = Skill.parsePrompt(prompt, skills);
         if (!parsed.skills().isEmpty()) {
             for (Skill skill : parsed.skills()) {
-                messages.addUserMessage(skill.applyArguments(parsed.argumentsText()));
+                messages.addUserMessage(skill.formatPrompt(parsed.argumentsText()));
             }
         } else {
             messages.addUserMessage(prompt);

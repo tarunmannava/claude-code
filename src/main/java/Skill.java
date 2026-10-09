@@ -192,6 +192,17 @@ public class Skill {
         return new ParsedPrompt(matchedSkills, argumentsText);
     }
 
+    public String formatPrompt(String argsString) {
+        String substituted = applyArguments(argsString);
+        if (dir == null) {
+            return substituted;
+        }
+        String dirPath = dir.toString().replace('\\', '/');
+        return "Skill: " + name + " (located at " + dirPath + ")\n" +
+                "Paths in the instructions below are relative to that folder.\n\n" +
+                substituted;
+    }
+
     public String applyArguments(String argsString) {
         if (body == null) {
             return "";

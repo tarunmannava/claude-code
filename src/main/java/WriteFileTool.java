@@ -39,9 +39,13 @@ public class WriteFileTool {
                 .build();
     }
 
-    public static String execute(String argumentsJson) throws IOException {
-        WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
-        Files.writeString(Path.of(call.filePath), call.content);
-        return "File written successfully";
+    public static String execute(String argumentsJson) {
+        try {
+            WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
+            Files.writeString(Path.of(call.filePath), call.content);
+            return "File written successfully";
+        } catch (Exception e) {
+            return "Error writing file: " + e.getMessage();
+        }
     }
 }

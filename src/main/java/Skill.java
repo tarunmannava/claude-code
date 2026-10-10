@@ -158,23 +158,15 @@ public class Skill {
         return null;
     }
 
-    public String getInstructions(String args) {
+    public String render(String args) {
         String result = applyArguments(args != null ? args : "");
-        if (dir != null && Files.isDirectory(dir.resolve("scripts"))) {
-            String dirPath = dir.toString().replace('\\', '/');
-            result = "Skill: " + name + " (located at " + dirPath + ")\n" +
-                    "Paths in the instructions below are relative to that folder.\n\n" +
-                    result;
+        if (dir == null) {
+            return result;
         }
-        return result;
-    }
-
-    public static String execute(List<Skill> skills, String name, String args) {
-        Skill skill = find(skills, name);
-        if (skill == null) {
-            return "Error: Skill not found: " + name;
-        }
-        return skill.getInstructions(args);
+        String dirPath = dir.toString().replace('\\', '/');
+        return "Skill: " + name + " (located at " + dirPath + ")\n" +
+                "Paths in the instructions below are relative to that folder.\n\n" +
+                result;
     }
 
     public record ParsedPrompt(List<Skill> skills, String argumentsText) {}
@@ -233,17 +225,6 @@ public class Skill {
         return new ParsedPrompt(matchedSkills, argumentsText);
     }
 
-    public String formatPrompt(String argsString) {
-        String substituted = applyArguments(argsString);
-        if (dir == null) {
-            return substituted;
-        }
-        String dirPath = dir.toString().replace('\\', '/');
-        return "Skill: " + name + " (located at " + dirPath + ")\n" +
-                "Paths in the instructions below are relative to that folder.\n\n" +
-                substituted;
-    }
-
     public String applyArguments(String argsString) {
         if (body == null) {
             return "";
@@ -251,15 +232,16 @@ public class Skill {
         String trimmedArgs = (argsString != null) ? argsString.trim() : "";
         String[] parts = trimmedArgs.isEmpty() ? new String[0] : trimmedArgs.split("\\s+");
 
-        // Substitute $ARGUMENTS with the full argument string
-        String substituted = body.replace("$ARGUMENTS", trimmedArgs);
-
-        // Substitute positional arguments $0, $1, $2, ...
-        Matcher matcher = Pattern.compile("\\$(\\d+)").matcher(substituted);
+        Matcher matcher = Pattern.compile("\\$ARGUMENTS|\\$(\\d+)").matcher(body);
         StringBuilder sb = new StringBuilder();
         while (matcher.find()) {
-            int index = Integer.parseInt(matcher.group(1));
-            String replacement = (index < parts.length) ? parts[index] : "";
+            String replacement;
+            if ("$ARGUMENTS".equals(matcher.group())) {
+                replacement = trimmedArgs;
+            } else {
+                int index = Integer.parseInt(matcher.group(1));
+                replacement = (index < parts.length) ? parts[index] : "";
+            }
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);

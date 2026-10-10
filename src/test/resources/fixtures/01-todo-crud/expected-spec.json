@@ -1,0 +1,78 @@
+{
+  "source_dir" : "src\\test\\resources\\fixtures\\01-todo-crud",
+  "target_dir" : "target/test-output/01-todo",
+  "base_package" : "com.example.todo",
+  "mapped_files" : [ {
+    "python_path" : "crud/item_crud.py",
+    "target_class" : "ItemCrud",
+    "target_package" : "com.example.todo.crud",
+    "target_java_path" : "src/main/java/com/example/todo/crud/ItemCrud.java"
+  }, {
+    "python_path" : "main.py",
+    "target_class" : "Application",
+    "target_package" : "com.example.todo",
+    "target_java_path" : "src/main/java/com/example/todo/Application.java"
+  }, {
+    "python_path" : "models/item.py",
+    "target_class" : "Item",
+    "target_package" : "com.example.todo.models",
+    "target_java_path" : "src/main/java/com/example/todo/models/Item.java"
+  }, {
+    "python_path" : "routers/item_router.py",
+    "target_class" : "ItemRouter",
+    "target_package" : "com.example.todo.routers",
+    "target_java_path" : "src/main/java/com/example/todo/routers/ItemRouter.java"
+  } ],
+  "leaves" : [ "models/item.py" ],
+  "cycles" : [ ],
+  "topological_order" : [ "models/item.py", "crud/item_crud.py", "routers/item_router.py", "main.py" ],
+  "types" : [ {
+    "python_class" : "FastAPI",
+    "target_class" : "Application",
+    "fields" : [ ]
+  }, {
+    "python_class" : "Item",
+    "target_class" : "Item",
+    "fields" : [ {
+      "name" : "id",
+      "python_type" : "int",
+      "target_java_type" : "Long",
+      "required" : true
+    }, {
+      "name" : "title",
+      "python_type" : "str",
+      "target_java_type" : "String",
+      "required" : true
+    }, {
+      "name" : "completed",
+      "python_type" : "bool",
+      "target_java_type" : "Boolean",
+      "required" : false
+    }, {
+      "name" : "price",
+      "python_type" : "float | None",
+      "target_java_type" : "Double",
+      "required" : false
+    } ]
+  }, {
+    "python_class" : "APIRouter",
+    "target_class" : "ItemRouter",
+    "fields" : [ ]
+  } ],
+  "routes" : [ {
+    "endpoint" : "/items/{item_id}",
+    "method" : "GET",
+    "function_name" : "read_item_endpoint"
+  }, {
+    "endpoint" : "/items",
+    "method" : "POST",
+    "function_name" : "create_item_endpoint"
+  } ],
+  "dynamic_hazards" : [ ],
+  "high_risk_alerts" : [ ],
+  "budget_estimate" : {
+    "total_files" : 4,
+    "estimated_cost_usd" : 0.14,
+    "max_budget_ceiling_usd" : 3.0
+  }
+}

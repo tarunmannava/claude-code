@@ -17,12 +17,22 @@ public class Skill {
     public final String description;
     public final String body;
     public final Path dir;
+    public final String context;
 
-    public Skill(String name, String description, String body, Path dir) {
+    public Skill(String name, String description, String body, Path dir, String context) {
         this.name = name;
         this.description = description;
         this.body = body;
         this.dir = dir;
+        this.context = context;
+    }
+
+    public Skill(String name, String description, String body, Path dir) {
+        this(name, description, body, dir, null);
+    }
+
+    public boolean isFork() {
+        return "fork".equalsIgnoreCase(context);
     }
 
     public static Skill load(Path skillFile, Path dir) {
@@ -54,6 +64,7 @@ public class Skill {
 
             String name = null;
             String description = "";
+            String context = null;
             if (data != null) {
                 Object nameObj = data.get("name");
                 if (nameObj != null) {
@@ -63,13 +74,17 @@ public class Skill {
                 if (descObj != null) {
                     description = descObj.toString().trim();
                 }
+                Object contextObj = data.get("context");
+                if (contextObj != null) {
+                    context = contextObj.toString().trim();
+                }
             }
 
             if (name == null || name.isEmpty()) {
                 name = dir.getFileName().toString();
             }
 
-            return new Skill(name, description, body, dir);
+            return new Skill(name, description, body, dir, context);
         } catch (Exception e) {
             System.err.println("Failed to load skill from " + skillFile + ": " + e.getMessage());
             return null;
@@ -143,19 +158,15 @@ public class Skill {
         return null;
     }
 
-    public static String execute(List<Skill> skills, String name, String args) {
-        Skill skill = find(skills, name);
-        if (skill == null) {
-            return "Error: Skill not found: " + name;
+    public String render(String args) {
+        String result = applyArguments(args != null ? args : "");
+        if (dir == null) {
+            return result;
         }
-        String result = skill.applyArguments(args != null ? args : "");
-        if (skill.dir != null && Files.isDirectory(skill.dir.resolve("scripts"))) {
-            String dirPath = skill.dir.toString().replace('\\', '/');
-            result = "Skill: " + skill.name + " (located at " + dirPath + ")\n" +
-                    "Paths in the instructions below are relative to that folder.\n\n" +
-                    result;
-        }
-        return result;
+        String dirPath = dir.toString().replace('\\', '/');
+        return "Skill: " + name + " (located at " + dirPath + ")\n" +
+                "Paths in the instructions below are relative to that folder.\n\n" +
+                result;
     }
 
     public record ParsedPrompt(List<Skill> skills, String argumentsText) {}
@@ -198,6 +209,11 @@ public class Skill {
 
             if (skill != null) {
                 matchedSkills.add(skill);
+                if (skill.isFork()) {
+                    // A skill that asks for a subagent ends a stacking run, so it's never expanded alongside another.
+                    argumentsText = prompt.substring(tokenEnd).trim();
+                    break;
+                }
             } else {
                 // First token that does not name a skill ends the run.
                 // That token and everything after it become the argument text.
@@ -209,17 +225,6 @@ public class Skill {
         return new ParsedPrompt(matchedSkills, argumentsText);
     }
 
-    public String formatPrompt(String argsString) {
-        String substituted = applyArguments(argsString);
-        if (dir == null) {
-            return substituted;
-        }
-        String dirPath = dir.toString().replace('\\', '/');
-        return "Skill: " + name + " (located at " + dirPath + ")\n" +
-                "Paths in the instructions below are relative to that folder.\n\n" +
-                substituted;
-    }
-
     public String applyArguments(String argsString) {
         if (body == null) {
             return "";
@@ -227,15 +232,16 @@ public class Skill {
         String trimmedArgs = (argsString != null) ? argsString.trim() : "";
         String[] parts = trimmedArgs.isEmpty() ? new String[0] : trimmedArgs.split("\\s+");
 
-        // Substitute $ARGUMENTS with the full argument string
-        String substituted = body.replace("$ARGUMENTS", trimmedArgs);
-
-        // Substitute positional arguments $0, $1, $2, ...
-        Matcher matcher = Pattern.compile("\\$(\\d+)").matcher(substituted);
+        Matcher matcher = Pattern.compile("\\$ARGUMENTS|\\$(\\d+)").matcher(body);
         StringBuilder sb = new StringBuilder();
         while (matcher.find()) {
-            int index = Integer.parseInt(matcher.group(1));
-            String replacement = (index < parts.length) ? parts[index] : "";
+            String replacement;
+            if ("$ARGUMENTS".equals(matcher.group())) {
+                replacement = trimmedArgs;
+            } else {
+                int index = Integer.parseInt(matcher.group(1));
+                replacement = (index < parts.length) ? parts[index] : "";
+            }
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);

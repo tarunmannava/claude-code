@@ -1,0 +1,40 @@
+{
+  "source_dir" : "src\\test\\resources\\fixtures\\03-untyped-legacy",
+  "target_dir" : "target/test-output/03-legacy",
+  "base_package" : "com.example.legacy",
+  "mapped_files" : [ {
+    "python_path" : "legacy/processor.py",
+    "target_class" : "Processor",
+    "target_package" : "com.example.legacy.legacy",
+    "target_java_path" : "src/main/java/com/example/legacy/legacy/Processor.java"
+  }, {
+    "python_path" : "main.py",
+    "target_class" : "Application",
+    "target_package" : "com.example.legacy",
+    "target_java_path" : "src/main/java/com/example/legacy/Application.java"
+  } ],
+  "leaves" : [ "legacy/processor.py" ],
+  "cycles" : [ ],
+  "topological_order" : [ "legacy/processor.py", "main.py" ],
+  "types" : [ {
+    "python_class" : "LegacyConfig",
+    "target_class" : "Application",
+    "fields" : [ ]
+  } ],
+  "routes" : [ ],
+  "dynamic_hazards" : [ {
+    "file" : "legacy/processor.py",
+    "type" : "getattr",
+    "line" : 3
+  }, {
+    "file" : "legacy/processor.py",
+    "type" : "setattr",
+    "line" : 8
+  } ],
+  "high_risk_alerts" : [ "Detected 2 dynamic Python hazard(s) (getattr/setattr/eval)" ],
+  "budget_estimate" : {
+    "total_files" : 2,
+    "estimated_cost_usd" : 0.07,
+    "max_budget_ceiling_usd" : 3.0
+  }
+}

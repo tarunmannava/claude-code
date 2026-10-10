@@ -1,0 +1,81 @@
+{
+  "source_dir" : "src\\test\\resources\\fixtures\\02-cyclic-ecommerce",
+  "target_dir" : "target/test-output/02-cyclic",
+  "base_package" : "com.example.ecommerce",
+  "mapped_files" : [ {
+    "python_path" : "main.py",
+    "target_class" : "Application",
+    "target_package" : "com.example.ecommerce",
+    "target_java_path" : "src/main/java/com/example/ecommerce/Application.java"
+  }, {
+    "python_path" : "models/order.py",
+    "target_class" : "Order",
+    "target_package" : "com.example.ecommerce.models",
+    "target_java_path" : "src/main/java/com/example/ecommerce/models/Order.java"
+  }, {
+    "python_path" : "models/user.py",
+    "target_class" : "User",
+    "target_package" : "com.example.ecommerce.models",
+    "target_java_path" : "src/main/java/com/example/ecommerce/models/User.java"
+  }, {
+    "python_path" : "services/checkout.py",
+    "target_class" : "Checkout",
+    "target_package" : "com.example.ecommerce.services",
+    "target_java_path" : "src/main/java/com/example/ecommerce/services/Checkout.java"
+  } ],
+  "leaves" : [ "cluster:[models/order.py, models/user.py]" ],
+  "cycles" : [ [ "models/user.py", "models/order.py" ] ],
+  "topological_order" : [ "cluster:[models/order.py, models/user.py]", "services/checkout.py", "main.py" ],
+  "types" : [ {
+    "python_class" : "Order",
+    "target_class" : "Order",
+    "fields" : [ {
+      "name" : "id",
+      "python_type" : "int",
+      "target_java_type" : "Long",
+      "required" : true
+    }, {
+      "name" : "user_id",
+      "python_type" : "int",
+      "target_java_type" : "Long",
+      "required" : true
+    }, {
+      "name" : "amount",
+      "python_type" : "float",
+      "target_java_type" : "Double",
+      "required" : true
+    }, {
+      "name" : "user",
+      "python_type" : "User | None",
+      "target_java_type" : "User",
+      "required" : false
+    } ]
+  }, {
+    "python_class" : "User",
+    "target_class" : "User",
+    "fields" : [ {
+      "name" : "id",
+      "python_type" : "int",
+      "target_java_type" : "Long",
+      "required" : true
+    }, {
+      "name" : "name",
+      "python_type" : "str",
+      "target_java_type" : "String",
+      "required" : true
+    }, {
+      "name" : "orders",
+      "python_type" : "list[Order]",
+      "target_java_type" : "List<Order>",
+      "required" : false
+    } ]
+  } ],
+  "routes" : [ ],
+  "dynamic_hazards" : [ ],
+  "high_risk_alerts" : [ "Detected 1 circular dependency cycle(s): [[models/user.py, models/order.py]]" ],
+  "budget_estimate" : {
+    "total_files" : 4,
+    "estimated_cost_usd" : 0.14,
+    "max_budget_ceiling_usd" : 3.0
+  }
+}

@@ -51,8 +51,10 @@ public class BashTool implements Tool {
         try {
             BashTool call = new ObjectMapper().readValue(argumentsJson, BashTool.class);
 
-            ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", call.command);
-            // Merges stderr into stdout so both are captured together
+            boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+            ProcessBuilder processBuilder = isWindows
+                    ? new ProcessBuilder("cmd.exe", "/c", call.command)
+                    : new ProcessBuilder("bash", "-c", call.command);
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();

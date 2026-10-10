@@ -56,7 +56,11 @@ public class WriteFileTool implements Tool {
     public String execute(String argumentsJson) {
         try {
             WriteFileTool call = new ObjectMapper().readValue(argumentsJson, WriteFileTool.class);
-            Files.writeString(Path.of(call.filePath), call.content);
+            Path path = Path.of(call.filePath);
+            if (path.getParent() != null) {
+                Files.createDirectories(path.getParent());
+            }
+            Files.writeString(path, call.content);
             return "File written successfully";
         } catch (Exception e) {
             return "Error writing file: " + e.getMessage();
